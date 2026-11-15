@@ -1,8 +1,10 @@
 //! Core repository engine. Nothing in here prints or parses CLI arguments;
 //! commands live in `crate::ops`.
 
+pub mod attributes;
 pub mod config;
 pub mod diff;
+pub mod gitread;
 pub mod history;
 pub mod ignore;
 pub mod index;

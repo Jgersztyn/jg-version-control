@@ -2,7 +2,8 @@
 
 use clap::{Parser, Subcommand, ValueEnum};
 use jg::ops::{
-    branch, commit, config, diff, gitexport, init, log, merge, remote, reset, stage, stash, status, sync, update,
+    branch, commit, config, diff, gitexport, gitimport, init, log, merge, remote, reset, stage, stash, status, sync,
+    update,
 };
 use std::path::PathBuf;
 
@@ -106,6 +107,8 @@ pub enum Cmd {
     Push(sync::PushOpts),
     /// Export history into a git repository (no git needed)
     GitExport(gitexport::ExportOpts),
+    /// Import a git repository's history, branches and tags (no git needed)
+    GitImport(gitimport::ImportOpts),
 
     // ---- setup & tooling
     /// Get or set configuration (user.name, user.email, ai.command, ...)

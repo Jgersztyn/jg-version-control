@@ -62,5 +62,7 @@ Multiple `-m` flags become separate paragraphs.
 
 - Metadata lives in `.jg/`, not `.git/`. Ignore rules come from `.jgignore` and `.gitignore`.
 - There is no rebase or interactive mode. Use merge, cherry-pick, revert and reset.
-- `jg git-export` writes this history into a real git repository (same commit ids).
+- `jg git-export` writes this history into a real git repository (same commit ids), and
+  `jg git-import` brings a git repository's history into jg. Don't run either unless asked.
+- Line endings follow `.gitattributes` / `core.autocrlf`, like git.
 - `jg checkout` is also available as `jg switch`.

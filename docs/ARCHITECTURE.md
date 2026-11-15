@@ -34,12 +34,15 @@ src/
     diff.rs          line diffs → structured hunks → unified diff text
     merge.rs         diff3 text merge + three-way tree merge
     config.rs        git-style INI config (repo + global layers)
+    attributes.rs    .gitattributes + core.autocrlf line-ending conversion (clean/smudge)
+    gitread.rs       read-only git repo access: loose objects, packfiles (+deltas), refs
     repo.rs          Repo: open/discover/init, locking, identity, work-tree file I/O
   ops/               one module per command family; each returns a Report
     mod.rs           Report trait, Style, Message, checkout_tree(), make_commit()
     status, stage (add/rm/mv/restore), commit, diff, log (log/show/reflog),
     branch (branch/checkout/tag), merge (merge/cherry-pick/revert), reset,
-    stash, remote, sync (clone/fetch/pull/push), gitexport, config (config/alias/
+    stash, remote, sync (clone/fetch/pull/push), gitexport, gitimport, reauthor,
+    config (config/alias/
     shell-init), update (self-update), agent (agent-guide)
   transport/mod.rs   Remote trait; local-path + SSH implementations; `jg serve`
 tests/               end-to-end tests that run the real binary
@@ -73,6 +76,12 @@ jg.lock              present while a jg command is writing
   conflicts recorded on index entries (`conflict: {base, ours, theirs}`) plus `.jg/MERGE_*`.
 - **push/fetch**: advertise refs → compute `objects_to_send(wants, haves)` → copy
   compressed objects → compare-and-swap ref updates (fast-forward only unless forced).
+- **Line endings**: `Repo::read_work_file` applies the *clean* conversion (CRLF→LF for
+  text files) and `Repo::write_work_file` the *smudge* (LF→CRLF where configured). All
+  work-tree I/O goes through those two functions, so status/add/diff/checkout agree.
+- **git-import**: `GitRepo` reads every git object (loose or packed; deltas resolved with a
+  bounded cache) and writes it to jg's store, checking that the id matches. Branches are
+  created, fast-forwarded, or imported as `git/<name>` when histories differ.
 - **SSH protocol** (`transport/mod.rs`): `ssh host "jg serve <path>"`. Frames are a
   4-byte length + payload. JSON requests: `ls-refs`, `fetch`, `push`, `quit`. Object
   frames are `oid(20) || zlib bytes`, ended by an empty frame.

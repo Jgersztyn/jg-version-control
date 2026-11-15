@@ -10,13 +10,16 @@ git export (objects, refs, index, incremental), config, aliases, shell shortcuts
 completions, self-update, `.deb` + APT repo + Windows zip packaging, `--json`
 everywhere, agent guide.
 
+v0.3.0: `jg git-import` (loose + packed history, same ids), `.gitattributes` /
+`core.autocrlf` line-ending handling, `jg init` adds `.jg/` to `.git/info/exclude`.
+
 v0.2.0: author fix-ups for your own commits (`commit --amend --reset-author`,
 `commit --reset-author --history`; aliases `fixme`, `fixme-all`).
 
 ## Known gaps / next steps (rough priority)
 
-1. **Git import** (`jg git-import <path>`): read git loose objects plus packfiles
-   (pack parsing with OFS/REF deltas). This allows adopting existing git repos.
+1. **Import git remote-tracking branches / uncommitted git index** (currently only
+   local branches and tags come over).
 2. **Packfiles / gc**: pack loose objects to save space and speed up transfers. Prune
    unreachable objects (respect reflogs and stashes).
 3. **Rename detection** in status/diff/merge (currently delete + add).
@@ -24,7 +27,7 @@ v0.2.0: author fix-ups for your own commits (`commit --amend --reset-author`,
 5. **Rebase** (non-interactive) built on cherry-pick.
 6. **Pager** for long output (`less -R` when stdout is a TTY).
 7. **Criss-cross merges**: use a recursive merge base (currently picks the most recent one).
-8. **Line-ending normalization** (`.gitattributes`-style `text=auto`) for mixed Windows/Linux use.
+8. **`.gitattributes` beyond line endings** (`diff`, `merge` drivers, `filter`/LFS).
 9. **Submodules**: not supported (gitlink entries are preserved but not handled).
 10. **Hooks** (`pre-commit` etc.).
 

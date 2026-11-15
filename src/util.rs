@@ -135,3 +135,17 @@ pub fn prune_empty_dirs(path: &Path, stop: &Path) {
         cur = dir.parent();
     }
 }
+
+/// Add `.jg/` to a git repository's `info/exclude` so git ignores jg's metadata.
+/// Returns true if the file was changed.
+pub fn exclude_jg_from_git(git_dir: &Path) -> Result<bool> {
+    let ex = git_dir.join("info").join("exclude");
+    let cur = fs::read_to_string(&ex).unwrap_or_default();
+    if cur.lines().any(|l| l.trim() == ".jg/" || l.trim() == ".jg" || l.trim() == "/.jg/") {
+        return Ok(false);
+    }
+    fs::create_dir_all(git_dir.join("info"))?;
+    let sep = if cur.is_empty() || cur.ends_with('\n') { "" } else { "\n" };
+    fs::write(&ex, format!("{cur}{sep}.jg/\n"))?;
+    Ok(true)
+}

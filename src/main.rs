@@ -113,6 +113,7 @@ fn dispatch(cmd: Cmd, ctx: &Ctx) -> anyhow::Result<()> {
         Cmd::Pull(o) => emit(ops::sync::pull(o)?, ctx),
         Cmd::Push(o) => emit(ops::sync::push(o)?, ctx),
         Cmd::GitExport(o) => emit(ops::gitexport::run(o)?, ctx),
+        Cmd::GitImport(o) => emit(ops::gitimport::run(o)?, ctx),
         Cmd::Config(o) => match ops::config::config(o)? {
             config::ConfigResult::List(l) => emit(l, ctx),
             config::ConfigResult::Done(m) => emit(m, ctx),

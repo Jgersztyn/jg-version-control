@@ -11,6 +11,7 @@ pub mod commit;
 pub mod config;
 pub mod diff;
 pub mod gitexport;
+pub mod gitimport;
 pub mod init;
 pub mod log;
 pub mod merge;
@@ -185,6 +186,8 @@ pub fn checkout_tree(repo: &Repo, idx: &mut Index, from: &FlatTree, to: &FlatTre
         repo.remove_work_file(p)?;
         idx.entries.remove(p);
     }
+    // Attribute files first, so line-ending rules apply to the files written after them.
+    to_write.sort_by_key(|(p, _, _)| !p.ends_with(".gitattributes"));
     for (p, m, o) in &to_write {
         repo.write_work_file(p, *m, o)?;
         idx.set(p, *m, *o);

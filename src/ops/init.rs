@@ -28,12 +28,20 @@ pub fn run(opts: InitOpts) -> Result<Message> {
     std::fs::create_dir_all(&path)?;
     let repo = Repo::init(&path, opts.bare, opts.initial_branch.as_deref())?;
     let branch = repo.current_branch()?.unwrap_or_default();
+    // If this folder is also a git repo, keep git from listing .jg/ as untracked.
+    let git_dir = path.join(".git");
+    let git_excluded = !opts.bare && git_dir.is_dir() && crate::util::exclude_jg_from_git(&git_dir)?;
+    let mut text = format!(
+        "Initialized empty {}jg repository in {} (branch '{branch}')",
+        if opts.bare { "bare " } else { "" },
+        repo.dir.display()
+    );
+    if git_excluded {
+        text.push_str("\nAdded .jg/ to .git/info/exclude so git ignores jg's data.");
+        text.push_str("\nTo bring over the git history too, run: jg git-import");
+    }
     Ok(Message::new(
-        format!(
-            "Initialized empty {}jg repository in {} (branch '{branch}')",
-            if opts.bare { "bare " } else { "" },
-            repo.dir.display()
-        ),
-        json!({ "path": repo.dir, "bare": opts.bare, "branch": branch }),
+        text,
+        json!({ "path": repo.dir, "bare": opts.bare, "branch": branch, "git_excluded": git_excluded }),
     ))
 }

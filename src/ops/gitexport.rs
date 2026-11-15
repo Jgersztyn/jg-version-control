@@ -54,12 +54,7 @@ pub fn run(opts: ExportOpts) -> Result<Message> {
     }
     if in_worktree {
         // Keep git from seeing jg's metadata as untracked files.
-        let ex = target.join("info").join("exclude");
-        let cur = fs::read_to_string(&ex).unwrap_or_default();
-        if !cur.lines().any(|l| l.trim() == ".jg/" || l.trim() == ".jg") {
-            fs::create_dir_all(ex.parent().unwrap())?;
-            fs::write(&ex, format!("{cur}{}.jg/\n", if cur.is_empty() || cur.ends_with('\n') { "" } else { "\n" }))?;
-        }
+        crate::util::exclude_jg_from_git(&target)?;
     }
 
     // Which refs to export.

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.3.0 — 2026-11-15
+
+- `jg git-import [path]`: import a git repository's commits, branches and annotated tags
+  with identical ids. Reads loose objects and packfiles (OFS/REF deltas) directly, so no
+  git is needed. Incremental on re-run. When a jg branch has different history, git's
+  branch is imported as `git/<name>`, with instructions to continue on top of it.
+- Line endings: `.gitattributes` (`text`, `text=auto`, `-text`, `binary`, `eol=`) and
+  `core.autocrlf` / `core.eol` are honored, matching git's behavior.
+- `jg init` inside a git work tree adds `.jg/` to `.git/info/exclude`.
+
 ## 0.2.0 — 2026-11-15
 
 - `jg commit --amend --reset-author` makes you the author of the last commit (alias `jg fixme`).

@@ -22,6 +22,8 @@ pub struct Repo {
     pub odb: Odb,
     pub refs: Refs,
     pub config: Config,
+    /// Lazily loaded `.gitattributes` rules (line-ending handling).
+    pub attrs: std::cell::RefCell<super::attributes::Attributes>,
 }
 
 impl Repo {
@@ -56,6 +58,7 @@ impl Repo {
             odb: Odb::new(dir.join("objects")),
             refs: Refs::new(dir.clone()),
             config: Config::load(Some(&dir.join("config"))),
+            attrs: Default::default(),
             dir,
         })
     }
@@ -205,7 +208,16 @@ impl Repo {
         Ok(crate::util::from_repo_path(self.work_dir()?, repo_path))
     }
 
-    /// Read a work-tree file's content as git would store it (symlinks -> target path).
+    /// Line-ending conversion for a path (see `core::attributes`).
+    pub fn conversion(&self, repo_path: &str) -> super::attributes::Conversion {
+        let Some(work) = self.work.as_deref() else { return super::attributes::Conversion::NONE };
+        let autocrlf = self.config.get("core.autocrlf").unwrap_or_default().to_lowercase();
+        let eol = self.config.get("core.eol").unwrap_or_default().to_lowercase();
+        self.attrs.borrow_mut().conversion(work, repo_path, &autocrlf, &eol)
+    }
+
+    /// Read a work-tree file's content as git would store it (symlinks -> target path,
+    /// line endings normalized per `.gitattributes` / `core.autocrlf`).
     pub fn read_work_file(&self, repo_path: &str) -> Result<Vec<u8>> {
         let p = self.work_path(repo_path)?;
         let meta = fs::symlink_metadata(&p)?;
@@ -213,7 +225,8 @@ impl Repo {
             let target = fs::read_link(&p)?;
             return Ok(target.to_string_lossy().replace('\\', "/").into_bytes());
         }
-        Ok(fs::read(&p)?)
+        let data = fs::read(&p)?;
+        Ok(super::attributes::clean(self.conversion(repo_path), data))
     }
 
     /// Determine the git mode for a work-tree file.
@@ -267,7 +280,11 @@ impl Repo {
                 return Ok(());
             }
         }
+        let data = super::attributes::smudge(self.conversion(repo_path), data);
         fs::write(&p, &data).with_context(|| format!("writing {}", p.display()))?;
+        if repo_path.ends_with(".gitattributes") {
+            self.attrs.borrow_mut().clear();
+        }
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

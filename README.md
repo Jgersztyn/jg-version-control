@@ -31,7 +31,7 @@ The repo can also be a folder: `deb [trusted=yes] file:/mnt/share/jg/apt ./`.
 ### Ubuntu / Debian: from a .deb file
 
 ```bash
-sudo apt install ./jg_0.2.0-1_amd64.deb
+sudo apt install ./jg_0.3.0-1_amd64.deb
 ```
 
 ### From source (any Linux, for development)
@@ -93,7 +93,7 @@ jg merge feature
 | Shelve | `stash [-u] [-m msg]`, `stash list/show/pop/apply/drop/clear` |
 | Tags | `tag`, `tag <name> [rev]`, `tag -a <name> -m msg`, `tag -d <name>` |
 | Remotes | `remote add/remove/set-url/list`, `fetch [--prune]`, `pull [--ff-only]`, `push [-u] [--force] [--tags] [remote] [branch]` |
-| Git | `git-export [path] [-b branch] [--force]` |
+| Git | `git-import [path] [--prefix p]`, `git-export [path] [-b branch] [--force]` |
 | Setup | `config [--global] key [value]`, `alias`, `shell-init`, `completions <shell>`, `self-update`, `agent-guide`, `version` |
 
 Run `jg <command> --help` for every option. Global flags: `--json`, `--color auto|always|never`, `-C <dir>`.
@@ -190,6 +190,45 @@ jg clone me@myserver:repos/project.jg                  # on another machine
   on the server's `PATH`: `jg config remote.origin.jgpath /opt/jg/bin/jg`.
 - Folder remotes: `jg remote add backup /mnt/nas/project.jg`.
 
+## Moving an existing git repository to jg
+
+```bash
+cd path/to/git/project
+jg git-import          # no git needed; creates the jg repo if there isn't one
+jg status              # should be clean (or show your uncommitted edits)
+jg log --oneline
+```
+
+- Every commit, branch and tag comes over with the **same ids** as in git. Packed
+  history (`git gc`) is supported.
+- The work tree and the `.git` folder are left alone. `.jg/` is added to `.git/info/exclude`
+  so git and tools like Sourcetree don't list jg's files. (`jg init` does this too.)
+- Running it again imports only what's new.
+- Files staged or modified in git but not committed aren't imported. They're just files
+  on disk, so `jg add` them.
+- Remote-tracking branches (`origin/...`) aren't imported. Check out any you need in git first.
+- **Already started a separate jg history in the same folder?** Git's branch comes in as
+  `git/<name>`, and the command prints how to continue on top of it:
+  ```bash
+  jg reset git/main      # your branch now sits on git's history; files on disk unchanged
+  jg status              # only real differences from git's last commit
+  jg add -A
+  jg commit -m "Continue from git history"
+  ```
+  The earlier jg commits stay reachable via `jg reflog`. Delete the leftover branch later
+  with `jg branch -D git/main`.
+
+## Line endings (Windows and Linux)
+
+jg follows git's rules, so a repo behaves the same with both tools:
+
+- `.gitattributes`: `text`, `text=auto`, `-text`, `binary`, `eol=lf`, `eol=crlf`.
+  Text files are stored with LF and written out with the platform's line ending
+  (CRLF on Windows) unless `eol=` says otherwise.
+- `core.autocrlf` (`true` / `input` / `false`) and `core.eol` (`lf` / `crlf` / `native`)
+  config, for files without attributes. `jg git-import` copies git's `core.autocrlf`.
+- Without `.gitattributes` or `core.autocrlf`, files are stored byte-for-byte.
+
 ## Exporting to git / GitHub
 
 ```bash
@@ -245,6 +284,7 @@ git push -u origin --all && git push --tags
 | `init.defaultBranch` | Branch name for `jg init` (default `main`) |
 | `core.editor` | Editor for commit messages (else `$VISUAL`, `$EDITOR`, nano/notepad) |
 | `core.filemode` | Track the executable bit (default true on Linux) |
+| `core.autocrlf`, `core.eol` | Line-ending conversion (see "Line endings") |
 | `core.sshCommand` | SSH client command (env `JG_SSH` overrides) |
 | `remote.<name>.url` / `.jgpath` | Remote location / path of `jg` on the server |
 | `ai.command`, `ai.trailer` | `commit --ai` drafting command / opt-in trailer |
