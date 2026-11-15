@@ -19,6 +19,8 @@ pub const DEFAULT_ALIASES: &[(&str, &str)] = &[
     ("last", "log -n 1"),
     ("lg", "log --oneline --all"),
     ("undo", "reset --soft HEAD~1"),
+    ("fixme", "commit --amend --reset-author --no-edit"),
+    ("fixme-all", "commit --reset-author --history"),
 ];
 
 /// Default shell shortcuts printed by `jg shell-init` (override with `shell-alias.<name>`).

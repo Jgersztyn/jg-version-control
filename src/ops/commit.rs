@@ -39,11 +39,30 @@ pub struct CommitOpts {
     /// With --ai: accept the draft without prompting (needed when not in a terminal)
     #[arg(short = 'y', long)]
     pub yes: bool,
+    /// Make you (user.name/user.email) the author. With --amend: the last commit.
+    /// With --history: every commit that is yours. Other people's commits are never changed.
+    #[arg(long = "reset-author")]
+    pub reset_author: bool,
+    /// With --reset-author: rewrite your commits across all branches, tags and stashes
+    #[arg(long, requires = "reset_author")]
+    pub history: bool,
+    /// An email you used before that counts as you (repeatable; also: user.formerEmails config)
+    #[arg(long = "old-email", value_name = "EMAIL")]
+    pub old_email: Vec<String>,
+    /// With --history: only show what would change
+    #[arg(short = 'n', long = "dry-run", requires = "history")]
+    pub dry_run: bool,
 }
 
 pub fn run(opts: CommitOpts) -> Result<Message> {
     let repo = open_repo()?;
     let _lock = repo.lock()?;
+    if opts.history {
+        return super::reauthor::rewrite_history(&repo, &opts.old_email, opts.dry_run);
+    }
+    if opts.reset_author && !opts.amend {
+        bail!("--reset-author needs --amend (last commit) or --history (all your commits)");
+    }
     let mut idx = repo.load_index()?;
     ensure_no_conflicts(&idx)?;
 
@@ -114,7 +133,12 @@ pub fn run(opts: CommitOpts) -> Result<Message> {
     // ---- parents / author ----
     let (parents, author, reflog) = if opts.amend {
         let hc = head_commit.as_ref().unwrap();
-        (hc.parents.clone(), hc.author.clone(), "commit (amend)")
+        let author = if opts.reset_author {
+            super::reauthor::amend_author(&repo, hc, &opts.old_email)?
+        } else {
+            hc.author.clone()
+        };
+        (hc.parents.clone(), author, "commit (amend)")
     } else {
         let mut ps: Vec<_> = head.into_iter().collect();
         if let Some(m) = merge_head {

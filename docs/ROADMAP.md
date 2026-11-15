@@ -10,6 +10,9 @@ git export (objects, refs, index, incremental), config, aliases, shell shortcuts
 completions, self-update, `.deb` + APT repo + Windows zip packaging, `--json`
 everywhere, agent guide.
 
+v0.2.0: author fix-ups for your own commits (`commit --amend --reset-author`,
+`commit --reset-author --history`; aliases `fixme`, `fixme-all`).
+
 ## Known gaps / next steps (rough priority)
 
 1. **Git import** (`jg git-import <path>`): read git loose objects plus packfiles

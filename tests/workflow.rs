@@ -265,3 +265,87 @@ fn diff_outputs() {
     assert_eq!(env.run(&d, &["diff"]).trim(), "");
     assert!(env.run(&d, &["diff", "--staged"]).contains("+world"));
 }
+
+/// Run jg as a specific identity.
+fn run_as(env: &Env, dir: &std::path::Path, name: &str, email: &str, args: &[&str]) -> std::process::Output {
+    env.cmd(dir, args).env("JG_AUTHOR_NAME", name).env("JG_AUTHOR_EMAIL", email).output().unwrap()
+}
+
+fn ok(o: std::process::Output) -> String {
+    assert!(o.status.success(), "stderr: {}", String::from_utf8_lossy(&o.stderr));
+    String::from_utf8_lossy(&o.stdout).into_owned()
+}
+
+#[test]
+fn reset_author_only_touches_your_commits() {
+    let env = Env::new();
+    let d = env.path("r");
+    std::fs::create_dir_all(&d).unwrap();
+    let dummy = ("Dummy", "dummy@example.com");
+    let other = ("Someone Else", "else@example.com");
+    let me = ("Real Me", "me@example.com");
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["init"]));
+    write(&d, "a.txt", "a\n");
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["add", "."]));
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["commit", "-m", "mine 1"]));
+    write(&d, "b.txt", "b\n");
+    ok(run_as(&env, &d, other.0, other.1, &["add", "."]));
+    ok(run_as(&env, &d, other.0, other.1, &["commit", "-m", "theirs"]));
+    write(&d, "c.txt", "c\n");
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["add", "."]));
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["commit", "-m", "mine 2"]));
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["tag", "-a", "v1", "-m", "tag"]));
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["branch", "side", "HEAD~1"]));
+
+    // Without knowing the old email, the last commit isn't recognised as yours.
+    assert!(!run_as(&env, &d, me.0, me.1, &["fixme"]).status.success());
+    // Dry run changes nothing.
+    ok(run_as(&env, &d, me.0, me.1, &["fixme-all", "--old-email", dummy.1, "--dry-run"]));
+    let log = |args: &[&str]| -> serde_json::Value {
+        let mut a = vec!["log", "--json"];
+        a.extend_from_slice(args);
+        serde_json::from_str(&ok(run_as(&env, &d, me.0, me.1, &a))).unwrap()
+    };
+    assert_eq!(log(&[])["commits"][0]["author"]["email"], dummy.1);
+
+    // Remember the old email, then rewrite everything.
+    env.run(&d, &["config", "user.formerEmails", dummy.1]);
+    ok(run_as(&env, &d, me.0, me.1, &["fixme-all"]));
+    let all = log(&["--all"]);
+    let commits = all["commits"].as_array().unwrap();
+    assert_eq!(commits.len(), 3);
+    for c in commits {
+        let email = c["author"]["email"].as_str().unwrap();
+        if c["summary"] == "theirs" {
+            assert_eq!(email, other.1, "other people's commits keep their author");
+            assert_eq!(c["committer"]["email"], other.1);
+        } else {
+            assert_eq!(email, me.1);
+            assert_eq!(c["author"]["name"], me.0);
+        }
+    }
+    // Branch `side` and tag `v1` follow the rewritten commits.
+    assert_eq!(log(&["side", "-n", "1"])["commits"][0]["summary"], "theirs");
+    let show: serde_json::Value =
+        serde_json::from_str(&ok(run_as(&env, &d, me.0, me.1, &["show", "v1", "--json"]))).unwrap();
+    assert!(show["tag"]["tagger"].as_str().unwrap().contains(me.1));
+    assert_eq!(show["commit"]["commit"], log(&[])["commits"][0]["commit"]);
+    // Running again is a no-op, and the work tree is untouched.
+    let again: serde_json::Value =
+        serde_json::from_str(&ok(run_as(&env, &d, me.0, me.1, &["fixme-all", "--json"]))).unwrap();
+    assert_eq!(again["rewritten"], 0);
+    assert_eq!(env.json(&d, &["status"])["clean"], true);
+
+    // Last-commit alias: works on your own commit, refuses someone else's.
+    write(&d, "d.txt", "d\n");
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["add", "."]));
+    ok(run_as(&env, &d, dummy.0, dummy.1, &["commit", "-m", "mine 3"]));
+    ok(run_as(&env, &d, me.0, me.1, &["fixme"]));
+    let top = &log(&["-n", "1"])["commits"][0];
+    assert_eq!((top["author"]["email"].as_str(), top["summary"].as_str()), (Some(me.1), Some("mine 3")));
+    write(&d, "e.txt", "e\n");
+    ok(run_as(&env, &d, other.0, other.1, &["add", "."]));
+    ok(run_as(&env, &d, other.0, other.1, &["commit", "-m", "theirs 2"]));
+    assert!(!run_as(&env, &d, me.0, me.1, &["fixme"]).status.success());
+    assert_eq!(log(&["-n", "1"])["commits"][0]["author"]["email"], other.1);
+}

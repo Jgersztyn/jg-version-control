@@ -47,6 +47,8 @@ fn no_attribution_without_ai_flag_across_all_commit_producing_commands() {
     env.run(&d, &["checkout", "main"]);
     env.run(&d, &["cherry-pick", "side"]);
     env.run(&d, &["tag", "-a", "v1", "-m", "Release one"]);
+    env.run(&d, &["fixme"]);
+    env.run(&d, &["fixme-all"]);
     write(&d, "a.txt", "three\n");
     env.run(&d, &["stash"]);
 

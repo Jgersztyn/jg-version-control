@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.2.0 — 2026-11-15
+
+- `jg commit --amend --reset-author` makes you the author of the last commit (alias `jg fixme`).
+- `jg commit --reset-author --history [--dry-run]` rewrites the name/email on all of your
+  commits and annotated tags across branches, tags and stashes (alias `jg fixme-all`).
+  Only commits whose email is yours (`user.email`, `user.formerEmails`, or `--old-email`)
+  change. Other people's commits are never touched.
+- Windows `install.ps1` reports the previous and new version when it updates an existing install.
+
 ## 0.1.0 — 2026-11-15
 
 First version.

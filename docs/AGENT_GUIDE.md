@@ -11,7 +11,8 @@ tool whose commands mirror git's. Print this guide any time with `jg agent-guide
    The only exception is the user explicitly running `jg commit --ai`.
 2. **Do not run destructive commands unless the user asked for them:**
    `reset --hard`, `checkout -f`, `restore` (discards edits), `stash clear`,
-   `stash drop`, `branch -D`, `push --force`, `push --delete`, `git-export --force`.
+   `stash drop`, `branch -D`, `push --force`, `push --delete`, `git-export --force`,
+   and history rewrites: `commit --reset-author --history` (alias `fixme-all`).
 3. **Do not push** (`jg push`) or export (`jg git-export`) unless asked.
 4. Prefer small, focused commits with clear messages (imperative summary ≤ 72 chars).
 5. If a command reports conflicts, stop and tell the user. Don't guess a resolution

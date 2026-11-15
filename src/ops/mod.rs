@@ -14,6 +14,7 @@ pub mod gitexport;
 pub mod init;
 pub mod log;
 pub mod merge;
+pub mod reauthor;
 pub mod remote;
 pub mod reset;
 pub mod stage;
